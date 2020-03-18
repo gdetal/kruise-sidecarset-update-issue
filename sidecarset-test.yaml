@@ -1,0 +1,12 @@
+apiVersion: apps.kruise.io/v1alpha1
+kind: SidecarSet
+metadata:
+  name: sidecarset-test
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  containers:
+  - name: busybox
+    image: busybox:latest
+    command: ["sleep", "999d"] # do nothing at all
