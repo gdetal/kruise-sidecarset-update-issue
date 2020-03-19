@@ -10,7 +10,7 @@ MULTICONTAINER ?= 1
 .PHONY: minikube kruise setup run check
 
 .NOTPARALLEL:
-check: kruise setup run
+check: minikube kruise setup run
 
 check_sc: MULTICONTAINER=0
 check_sc: check
@@ -20,11 +20,11 @@ check_sc: check
 # 3- validate that the sidecar container has been updated
 run:
 	$(KUBECTL_NS) get pods --selector=app=nginx -o json | \
-		jq -er '.items[].spec.containers[1].image == "busybox:latest"'
+		jq -er '.items[].spec.containers[-1].image == "busybox:latest"'
 	$(KUBECTL_NS) apply -f ./sidecarset-test-update.yaml
 	sleep 120 # wait for sidecar to be updated
 	$(KUBECTL_NS) get pods --selector=app=nginx -o json | \
-		jq -er '.items[].spec.containers[1].image == "ubuntu:latest"'
+		jq -er '.items[].spec.containers[-1].image == "ubuntu:latest"'
 
 # The following targets setup a minikube cluster with kruise installed and a sidecarset defined to add a sidecar to nginx pods.
 setup:
@@ -37,7 +37,7 @@ setup:
 	fi
 	$(KUBECTL_NS)  wait --for=condition=Ready --all pod --timeout 1m
 
-kruise: minikube
+kruise:
 	helm install --wait kruise https://github.com/openkruise/kruise/releases/download/v$(KRUISE_VERSION)/kruise-chart.tgz --set manager.log.level=5
 
 minikube:
