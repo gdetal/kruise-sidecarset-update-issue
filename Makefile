@@ -1,24 +1,32 @@
 KRUISE_VERSION ?= 0.4.0
-KUBERNETES_VERSION ?= 1.14.3
+KUBERNETES_VERSION ?= 1.16.4
 
-.PHONY: minikube kruise setup
+TEST_NAMESPACE ?= testns
+KUBECTL := minikube kubectl --
+KUBECTL_NS := $(KUBECTL) -n "$(TEST_NAMESPACE)"
+
+.PHONY: minikube kruise setup run check
+
+.NOTPARALLEL:
+check: kruise setup run
 
 # 1- validate that the sidecar container is setup
 # 2- patch the SidecarSet image
 # 3- validate that the sidecar container has been updated
-check: setup
-	minikube kubectl -- get pods --selector=app=nginx -o json | \
+run:
+	$(KUBECTL_NS) get pods --selector=app=nginx -o json | \
 		jq -er '.items[].spec.containers[1].image == "busybox:latest"'
-	minikube kubectl -- apply -f ./sidecarset-test-update.yaml
+	$(KUBECTL_NS) apply -f ./sidecarset-test-update.yaml
 	sleep 120 # wait for sidecar to be updated
-	minikube kubectl -- get pods --selector=app=nginx -o json | \
+	$(KUBECTL_NS) get pods --selector=app=nginx -o json | \
 		jq -er '.items[].spec.containers[1].image == "ubuntu:latest"'
 
 # The following targets setup a minikube cluster with kruise installed and a sidecarset defined to add a sidecar to nginx pods.
-setup: kruise
-	minikube kubectl -- apply -f ./sidecarset-test.yaml
-	minikube kubectl -- apply -f ./nginx.yaml
-	minikube kubectl --  wait --for=condition=Ready --all pod --timeout 1m
+setup:
+	$(KUBECTL) create namespace "$(TEST_NAMESPACE)"
+	$(KUBECTL_NS) apply -f ./sidecarset-test.yaml
+	$(KUBECTL_NS) apply -f ./nginx.yaml
+	$(KUBECTL_NS)  wait --for=condition=Ready --all pod --timeout 1m
 
 kruise: minikube
 	helm install --wait kruise https://github.com/openkruise/kruise/releases/download/v$(KRUISE_VERSION)/kruise-chart.tgz --set manager.log.level=5
