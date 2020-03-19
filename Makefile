@@ -1,5 +1,5 @@
 KRUISE_VERSION ?= 0.4.0
-KUBERNETES_VERSION ?= 1.16.4
+KUBERNETES_VERSION ?= 1.16.7
 
 TEST_NAMESPACE ?= testns
 KUBECTL := minikube kubectl --
@@ -7,13 +7,16 @@ KUBECTL_NS := $(KUBECTL) -n "$(TEST_NAMESPACE)"
 
 MULTICONTAINER ?= 1
 
-.PHONY: minikube kruise setup run check
+.PHONY: minikube kruise setup run check run-test clean
 
 .NOTPARALLEL:
-check: minikube kruise setup run
+check: minikube run-test
 
 check_sc: MULTICONTAINER=0
 check_sc: check
+
+.NOTPARALLEL:
+run-test: kruise setup run
 
 # 1- validate that the sidecar container is setup
 # 2- patch the SidecarSet image
@@ -39,6 +42,11 @@ setup:
 
 kruise:
 	helm install --wait kruise https://github.com/openkruise/kruise/releases/download/v$(KRUISE_VERSION)/kruise-chart.tgz --set manager.log.level=5
+
+
+clean:
+	$(KUBECTL) delete namespace "$(TEST_NAMESPACE)" || true
+	helm uninstall kruise || true
 
 minikube:
 	-minikube delete
