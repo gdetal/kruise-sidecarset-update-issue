@@ -9,9 +9,8 @@ KUBERNETES_VERSION ?= 1.14.3
 check: setup
 	minikube kubectl -- get pods --selector=app=nginx -o json | \
 		jq -er '.items[].spec.containers[1].image == "busybox:latest"'
-	minikube kubectl -- patch sidecarsets sidecarset-test --type merge \
-		-p '{"spec":{"containers":[{"name":"busybox","image":"ubuntu:latest"}]}}'
-	minikube kubectl --  wait --for=condition=Ready --all pod --timeout 1m
+	minikube kubectl -- apply -f ./sidecarset-test-update.yaml
+	sleep 120 # wait for sidecar to be updated
 	minikube kubectl -- get pods --selector=app=nginx -o json | \
 		jq -er '.items[].spec.containers[1].image == "ubuntu:latest"'
 
