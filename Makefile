@@ -5,10 +5,15 @@ TEST_NAMESPACE ?= testns
 KUBECTL := minikube kubectl --
 KUBECTL_NS := $(KUBECTL) -n "$(TEST_NAMESPACE)"
 
+MULTICONTAINER ?= 1
+
 .PHONY: minikube kruise setup run check
 
 .NOTPARALLEL:
 check: kruise setup run
+
+check_sc: MULTICONTAINER=0
+check_sc: check
 
 # 1- validate that the sidecar container is setup
 # 2- patch the SidecarSet image
@@ -25,7 +30,11 @@ run:
 setup:
 	$(KUBECTL) create namespace "$(TEST_NAMESPACE)"
 	$(KUBECTL_NS) apply -f ./sidecarset-test.yaml
-	$(KUBECTL_NS) apply -f ./nginx.yaml
+	if test "$(MULTICONTAINER)" -eq "0"; then \
+		$(KUBECTL_NS) apply -f ./nginx.yaml; \
+	else \
+		$(KUBECTL_NS) apply -f ./nginx-mc.yaml; \
+	fi
 	$(KUBECTL_NS)  wait --for=condition=Ready --all pod --timeout 1m
 
 kruise: minikube
